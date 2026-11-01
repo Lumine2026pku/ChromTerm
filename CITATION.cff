@@ -1,0 +1,25 @@
+cff-version: 1.2.0
+message: "如果本仓库对你的工作有帮助，请按下面的格式引用。"
+title: "ChromTerm: 黑腹果蝇唾腺染色体端部判读（本地网页 + 纯 numpy 推理）"
+abstract: >-
+  上传一张显微照片或端部小图，自动找出候选染色体末端，给出 6 类
+  (2L/2R/3L/3R/X/other) 概率、几何量测与最可能结论；无可识别末端时输出「无」。
+  推理仅依赖 numpy + Pillow，服务使用 Python 标准库。
+version: 1.0.0
+date-released: "2026-11-01"
+license: MIT
+type: software
+authors:
+  - name: "ChromTerm contributors"
+keywords:
+  - drosophila
+  - polytene chromosome
+  - chromosome banding
+  - image classification
+  - optical density
+repository-code: "https://github.com/<your-name>/ChromTerm"
+preferred-citation:
+  type: generic
+  title: "黑腹果蝇唾腺染色体端部识别：模型改进与实测报告"
+  year: 2026
+  note: "随仓库分发的 docs/说明_模型改进.docx（20 页，含消融与局限）"

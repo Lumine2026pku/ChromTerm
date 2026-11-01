@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ChromTerm · 果蝇唾腺染色体端部判读</title>
+<meta name="description" content="上传一张显微照片或端部小图，识别染色体末端并给出 6 类概率、置信度与最可能结论。纯前端、无需后端。">
+<link rel="stylesheet" href="assets/style.css">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%231f3b73'/%3E%3Cpath d='M8 20c4-8 12-8 16 0' stroke='%23fff' stroke-width='2.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E">
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <div class="logo" aria-hidden="true">
+      <svg viewBox="0 0 32 32"><path d="M7 21c4.5-9 13.5-9 18 0" fill="none" stroke="#fff"
+        stroke-width="2.6" stroke-linecap="round"/><circle cx="7" cy="21" r="2.4" fill="#fff"/></svg>
+    </div>
+    <div>
+      <h1>ChromTerm · 果蝇唾腺染色体端部判读</h1>
+      <p class="sub">上传一张端部小图（推荐）或整片照片，得到末端位置、6 类概率与最可能结论</p>
+    </div>
+  </div>
+  <div class="badges">
+    <span class="badge" id="modeBadge" title="判读模式"><span class="dot"></span><span id="modeText">检测环境…</span></span>
+    <span class="badge" id="perfBadge" hidden></span>
+  </div>
+</header>
+
+<main class="wrap">
+  <!-- ================= 左：上传 + 图像 ================= -->
+  <section class="panel left">
+    <div class="modebar" role="tablist" aria-label="判读模式">
+      <button class="seg active" id="modeSingle" role="tab" aria-selected="true">
+        单末端<span class="seg-hint">推荐 · 精度最高</span>
+      </button>
+      <button class="seg" id="modeMulti" role="tab" aria-selected="false" disabled
+              title="需要本地 Python 服务（python app.py）；GitHub Pages 上不可用">
+        整片多末端<span class="seg-hint">实验性</span>
+      </button>
+    </div>
+
+    <div id="drop" class="drop">
+      <svg viewBox="0 0 24 24" class="drop-icon" aria-hidden="true">
+        <path d="M12 16V4m0 0L8 8m4-4 4 4" fill="none" stroke="currentColor" stroke-width="1.6"
+              stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3" fill="none" stroke="currentColor"
+              stroke-width="1.6" stroke-linecap="round"/>
+      </svg>
+      <p class="drop-title">拖入端部小图，或 <button id="pick" class="linkish">点击选择</button></p>
+      <p class="drop-hint">JPG / PNG / TIF · 也可 Ctrl+V 粘贴 · 图片只在本机内存里处理，不会上传</p>
+      <div class="drop-actions">
+        <button id="exampleTerm" class="ghost">示例：端部小图</button>
+        <button id="examplePhoto" class="ghost">示例：整片照片</button>
+      </div>
+    </div>
+    <input type="file" id="file" accept="image/*" hidden>
+
+    <figure id="viewer" class="viewer hidden">
+      <div class="viewer-head">
+        <span id="imgMeta" class="meta">—</span>
+        <span class="viewer-tools">
+          <button id="zoomFit" class="tiny active">适应</button>
+          <button id="zoom100" class="tiny">1:1</button>
+        </span>
+      </div>
+      <div id="stage" class="stage">
+        <div class="frame" id="frame">
+          <img id="photo" alt="待判读的图片">
+          <svg id="overlay" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none"></svg>
+        </div>
+      </div>
+      <figcaption class="legend">
+        <span><i class="sw sw-box"></i>取值框</span>
+        <span><i class="sw sw-dot"></i>末端位置</span>
+        <span><i class="sw sw-window"></i>模型实际看到的窗口</span>
+      </figcaption>
+    </figure>
+  </section>
+
+  <!-- ================= 右：结论 + 明细 ================= -->
+  <section class="panel right">
+    <div id="idle" class="idle">
+      <h2>等待图片</h2>
+      <ol class="steps">
+        <li><b>推荐上传单个末端</b>（如 246×112 的小图）：整张当作一个末端判读，精度最高。</li>
+        <li>整片照片也能判读，但多条臂在染色中心粘连时容易选错；若环境支持，可切到「整片多末端」。</li>
+        <li>画面里没有可识别的染色体时，会明确输出「无」。</li>
+      </ol>
+      <p class="fine" id="idleModel">模型：光密度归一化 + 带纹/形态特征 + 6 类逻辑回归。</p>
+    </div>
+
+    <div id="loading" class="loading hidden">
+      <div class="spinner"></div>
+      <p>正在判读…<span id="elapsed"></span></p>
+      <p class="fine">端部小图约 0.1–0.3 秒；整片照片 2–6 秒</p>
+    </div>
+
+    <div id="error" class="errorbox hidden"></div>
+
+    <div id="result" class="hidden">
+      <div id="verdict" class="verdict"></div>
+      <div id="termList" class="termlist"></div>
+      <details class="rawbox">
+        <summary>查看原始 JSON</summary>
+        <pre id="raw"></pre>
+      </details>
+    </div>
+  </section>
+</main>
+
+<footer class="foot">
+  <span>研究 / 教学用途，不用于诊断。图片不离开本机；静态模式在浏览器里推理。</span>
+  <span id="footModel"></span>
+</footer>
+
+<div id="modal" class="modal hidden"><img id="modalImg" alt="放大图"><div class="modal-cap" id="modalCap"></div></div>
+
+<script type="module" src="assets/app.js"></script>
+</body>
+</html>

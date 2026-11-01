@@ -1,0 +1,7 @@
+# 运行网页判读只需要这三样（推理全部用 numpy 写，不依赖 torch / cv2 / scipy）
+numpy>=1.23
+pandas>=1.5
+Pillow>=9.5
+
+# 训练 / 评估脚本额外需要（tools/ 下，需要自备 data_share 数据集）
+# python-docx>=1.1      # 只有 tools/make_report.py 需要
