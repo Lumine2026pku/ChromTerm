@@ -1,0 +1,89 @@
+{
+  "ours": {
+    "n_curves": 948,
+    "n_points": 186.0,
+    "n_bands": 3.0,
+    "band_width": 15.0,
+    "arm_width": 42.0,
+    "width_in_band": 46.16032886505127,
+    "width_between": 40.0,
+    "frac_thicker": 0.7281659388646288,
+    "corr_gray_width": -0.2566582377870904,
+    "frac_abs_corr_gt07": 0.07872340425531915
+  },
+  "doc": {
+    "n_curves": 148,
+    "n_points": 167,
+    "n_bands": 3,
+    "band_width": 16.9,
+    "arm_width": 40.5,
+    "width_in_band": 41.7,
+    "width_between": 37.2,
+    "frac_thicker": 0.84,
+    "corr_gray_width": -0.26,
+    "frac_abs_corr_gt07": 0.02
+  },
+  "rows": [
+    {
+      "key": "n_curves",
+      "label": "曲线条数",
+      "ours": 948,
+      "doc": 148
+    },
+    {
+      "key": "n_points",
+      "label": "每条曲线采样点数（中位）",
+      "ours": 186.0,
+      "doc": 167
+    },
+    {
+      "key": "n_bands",
+      "label": "每条曲线条带数（中位）",
+      "ours": 3.0,
+      "doc": 3
+    },
+    {
+      "key": "band_width",
+      "label": "条带沿轴宽度 px（中位）",
+      "ours": 15.0,
+      "doc": 16.9
+    },
+    {
+      "key": "arm_width",
+      "label": "臂的横向宽度 px（中位）",
+      "ours": 42.0,
+      "doc": 40.5
+    },
+    {
+      "key": "width_in_band",
+      "label": "条带处横向宽度 px",
+      "ours": 46.1603,
+      "doc": 41.7
+    },
+    {
+      "key": "width_between",
+      "label": "条带间横向宽度 px",
+      "ours": 40.0,
+      "doc": 37.2
+    },
+    {
+      "key": "frac_thicker",
+      "label": "带处更粗的曲线占比",
+      "ours": 0.7282,
+      "doc": 0.84
+    },
+    {
+      "key": "corr_gray_width",
+      "label": "灰度–宽度相关系数（中位）",
+      "ours": -0.2567,
+      "doc": -0.26
+    },
+    {
+      "key": "frac_abs_corr_gt07",
+      "label": "|r|>0.7 的曲线占比",
+      "ours": 0.0787,
+      "doc": 0.02
+    }
+  ],
+  "note": "本实现跑的是全部 961 个端部窗口；说明书跑的是 148 条平直曲线。"
+}

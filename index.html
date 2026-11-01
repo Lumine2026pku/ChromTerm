@@ -87,7 +87,7 @@
         <li>整片照片也能判读，但多条臂在染色中心粘连时容易选错；若环境支持，可切到「整片多末端」。</li>
         <li>画面里没有可识别的染色体时，会明确输出「无」。</li>
       </ol>
-      <p class="fine" id="idleModel">模型：光密度归一化 + 带纹/形态特征 + 6 类逻辑回归。</p>
+      <p class="fine" id="idleModel">模型：光密度归一化 + 带纹/形态特征（836 维）+ 收缩 LDA（温度校准）。</p>
     </div>
 
     <div id="loading" class="loading hidden">

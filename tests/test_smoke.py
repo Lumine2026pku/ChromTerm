@@ -122,6 +122,44 @@ def test_blank_is_none(predictor):
     assert res["n_terminals"] == 0
 
 
+def test_tiff_example_is_valid():
+    """仓库里的示例 TIFF 必须能被读、且与同名 JPG 是同一张图（允许压缩误差）。"""
+    tif = os.path.join(EXAMPLES, "example_terminal.tif")
+    assert os.path.isfile(tif), "示例 TIFF 缺失"
+    a = np.asarray(Image.open(tif).convert("RGB"), dtype=np.float32)
+    b = np.asarray(Image.open(WINDOW).convert("RGB"), dtype=np.float32)
+    assert a.shape == b.shape == (112, 246, 3)
+    assert np.abs(a - b).mean() < 3.0
+
+
+def test_tiff_decoder_matches_pil(tmp_path):
+    """浏览器端的 TIFF 解码器要和 PIL 对得上（Node 缺失时跳过）。"""
+    import shutil
+    import subprocess
+
+    node = shutil.which("node")
+    if not node:
+        pytest.skip("没有 node，跳过 JS TIFF 解码器校验")
+    engine = os.path.join(ROOT, "assets", "js", "tiff.js")
+    tif = os.path.join(EXAMPLES, "example_terminal.tif")
+    script = tmp_path / "check.mjs"
+    script.write_text(
+        "import fs from 'node:fs';\n"
+        "const { pathToFileURL } = await import('node:url');\n"
+        "const mod = await import(pathToFileURL(process.argv[2]).href);\n"
+        "const b = fs.readFileSync(process.argv[3]);\n"
+        "const ab = b.buffer.slice(b.byteOffset, b.byteOffset + b.byteLength);\n"
+        "const d = await mod.decodeTiff(ab);\n"
+        "process.stdout.write(JSON.stringify({ w: d.width, h: d.height, px: Array.from(d.data) }));\n",
+        encoding="utf-8")
+    out = subprocess.check_output([node, str(script), engine, tif], timeout=120)
+    dec = json.loads(out.decode("utf-8"))
+    ref = np.asarray(Image.open(tif).convert("RGBA"), dtype=np.uint8)
+    assert (dec["w"], dec["h"]) == (ref.shape[1], ref.shape[0])
+    js = np.asarray(dec["px"], dtype=np.uint8).reshape(ref.shape)
+    assert int(np.abs(js.astype(int) - ref.astype(int)).max()) <= 1
+
+
 def _free_port() -> int:
     with socket.socket() as s:
         s.bind(("127.0.0.1", 0))

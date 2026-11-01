@@ -26,7 +26,8 @@ const state = {
   objectUrl: null,
 };
 
-const QUALITY_TEXT = { good: '可直接采信', fair: '需人工确认', poor: '低置信', cut: '端部贴边' };
+// 文案要对得上实测：good 档在 test 上约 78% 正确，所以写「较可信」而不是「可直接采信」
+const QUALITY_TEXT = { good: '较可信', fair: '需人工确认', poor: '低置信', cut: '端部贴边' };
 const MAX_INFER_SIDE = 1600;          // 推理前把图缩到这个边长以内（与后端一致）
 const API_TIMEOUT = 1500;
 
@@ -87,8 +88,8 @@ function fillModelInfo(m) {
   $('perfBadge').hidden = false;
   $('perfBadge').textContent = `测试集 top-1 ${acc} · top-2 ${top2}`;
   $('idleModel').textContent =
-    `模型：光密度归一化 + 带纹/形态特征 + 6 类逻辑回归（测试集 150 个端部窗口：` +
-    `top-1 ${acc}、top-2 ${top2}）。结果请当作辅助判读。`;
+    '模型：光密度归一化 + 带纹/形态特征（836 维）+ 收缩 LDA（温度校准）。' +
+    `测试集 150 个端部窗口：top-1 ${acc}、top-2 ${top2}。结果请当作辅助判读。`;
   $('footModel').textContent =
     `模型 ${m.feature_set || 'OD + 带纹特征'} · 指标来源 models/metrics.json`;
 }
@@ -373,7 +374,12 @@ async function analyzeInBrowser(img) {
     quad: null,
     box, className: 'box',
     stats: { scale: res.scale, fg: res.fg, ac_peak: res.ac_peak },
-    quality: res.conf >= 0.55 ? 'good' : res.conf >= 0.35 ? 'fair' : 'poor',
+    // 阈值不是拍的：在官方 test 的 150 个窗口上按置信度分档实测——
+    //   conf>=0.55 覆盖 15%、准确率 78%   → good（较可信）
+    //   conf>=0.40 覆盖 49%、准确率 59%   → fair（需人工确认）
+    //   conf< 0.40 覆盖 51%、准确率不到 59% → poor
+    // 模型温度校准后概率整体变平（中位约 0.40），所以这套阈值与旧版不同。
+    quality: res.conf >= 0.55 ? 'good' : res.conf >= 0.40 ? 'fair' : 'poor',
     flags: [],
     crop_png: res.ok ? windowThumb(img, box, 246) : null,
     geo: null,

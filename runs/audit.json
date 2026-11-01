@@ -1,0 +1,323 @@
+{
+  "structure": {
+    "n_windows": 961,
+    "n_images": 432,
+    "n_det_images": 432,
+    "n_det_boxes": 961,
+    "classes": {
+      "2L": 186,
+      "2R": 168,
+      "3L": 190,
+      "3R": 181,
+      "X": 163,
+      "other": 73
+    },
+    "splits": {
+      "train": 660,
+      "val": 151,
+      "test": 150
+    },
+    "windows_match_boxes": true,
+    "sources": {
+      "xgw100": 321,
+      "xgw40": 213,
+      "zlg40": 197,
+      "org_full": 175,
+      "org_crop": 55
+    },
+    "size_classes": {
+      "large": 880,
+      "small": 81
+    },
+    "windows_per_image": {
+      "1": 219,
+      "2": 100,
+      "3": 43,
+      "4": 27,
+      "5": 22,
+      "6": 7,
+      "7": 2,
+      "8": 2,
+      "9": 3,
+      "10": 2,
+      "12": 1,
+      "13": 1,
+      "14": 1,
+      "17": 1,
+      "20": 1
+    }
+  },
+  "duplicates": {
+    "det_md5_dups": 0,
+    "det_md5_examples": [],
+    "det_near_dups": 1,
+    "det_near_dup_examples": [
+      [
+        "org__3L-7",
+        "org__X-34",
+        4
+      ]
+    ],
+    "det_near_dups_cross_split": 1,
+    "window_md5_dups": 0,
+    "window_dups_cross_split": 0,
+    "window_dups_class_conflict": 0
+  },
+  "grouping": {
+    "images_multi_split": 0,
+    "images": 432,
+    "split_by_image": true
+  },
+  "control": {
+    "available": true,
+    "persons": [
+      "p01",
+      "p02",
+      "p03",
+      "p04",
+      "p05",
+      "p06",
+      "p07",
+      "p08"
+    ],
+    "n_images": 10,
+    "annotators": 8,
+    "kappa_class_presence": 0.6695587029355213,
+    "exact_set_agreement": 0.65,
+    "box_iou_median": 0.595181405544281,
+    "box_iou_p10": 0.3351780891418457,
+    "n_box_pairs": 723,
+    "tip_dist_median_px": 4.9163408279418945,
+    "tip_dist_p90_px": 117.21400451660158,
+    "boxes_per_annotator": {
+      "1": 40,
+      "4": 11,
+      "3": 5,
+      "7": 6,
+      "10": 2,
+      "5": 13,
+      "8": 2,
+      "11": 1
+    }
+  },
+  "multi_annotation": {
+    "n_annotation_files": 520,
+    "n_images": 449,
+    "images_multi_annotated": 11,
+    "multi_full_agreement": 0.45454545454545453,
+    "examples": [
+      [
+        "org__2L-32",
+        [
+          "p01",
+          "p02",
+          "p03",
+          "p04",
+          "p05",
+          "p06",
+          "p07",
+          "p08"
+        ],
+        [
+          [
+            "2L"
+          ],
+          [
+            "2L"
+          ],
+          [
+            "2L"
+          ],
+          [
+            "2L"
+          ],
+          [
+            "2L"
+          ],
+          [
+            "2L"
+          ],
+          [
+            "2L"
+          ],
+          [
+            "2L"
+          ]
+        ]
+      ],
+      [
+        "org__2L-37",
+        [
+          "p01",
+          "p02",
+          "p03",
+          "p04",
+          "p05",
+          "p06",
+          "p07",
+          "p08"
+        ],
+        [
+          [
+            "2L"
+          ],
+          [
+            "2L"
+          ],
+          [
+            "2L"
+          ],
+          [
+            "2L"
+          ],
+          [
+            "2L"
+          ],
+          [
+            "2L"
+          ],
+          [
+            "2L"
+          ],
+          [
+            "2L"
+          ]
+        ]
+      ],
+      [
+        "org__2L-54",
+        [
+          "p08",
+          "own"
+        ],
+        [
+          [
+            "2L",
+            "2R"
+          ],
+          [
+            "2L",
+            "2R"
+          ]
+        ]
+      ],
+      [
+        "org__2L-56",
+        [
+          "p01",
+          "p02",
+          "p03",
+          "p04",
+          "p05",
+          "p06",
+          "p07",
+          "p08"
+        ],
+        [
+          [
+            "2L"
+          ],
+          [
+            "2L"
+          ],
+          [
+            "2L"
+          ],
+          [
+            "2L"
+          ],
+          [
+            "2L"
+          ],
+          [
+            "2L"
+          ],
+          [
+            "2L"
+          ],
+          [
+            "2L"
+          ]
+        ]
+      ],
+      [
+        "org__3R-3",
+        [
+          "p01",
+          "p02",
+          "p03",
+          "p04",
+          "p05",
+          "p06",
+          "p07",
+          "p08"
+        ],
+        [
+          [
+            "3R"
+          ],
+          [
+            "3R"
+          ],
+          [
+            "2R"
+          ],
+          [
+            "3R"
+          ],
+          [
+            "3R"
+          ],
+          [
+            "X"
+          ],
+          [
+            "X"
+          ],
+          [
+            "3R"
+          ]
+        ]
+      ],
+      [
+        "xgw100__WT-100X-32",
+        [
+          "p01",
+          "p02",
+          "p03",
+          "p04",
+          "p05",
+          "p06",
+          "p07",
+          "p08"
+        ],
+        [
+          [
+            "2L"
+          ],
+          [
+            "2L"
+          ],
+          [
+            "2L"
+          ],
+          [
+            "2L"
+          ],
+          [
+            "2L"
+          ],
+          [
+            "2L"
+          ],
+          [
+            "2L"
+          ],
+          [
+            "2L"
+          ]
+        ]
+      ]
+    ]
+  }
+}

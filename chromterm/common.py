@@ -37,8 +37,24 @@ EXAMPLES = os.path.join(ROOT, "examples")
 DOCS = os.path.join(ROOT, "docs")
 RUNS = os.path.join(ROOT, "runs")
 CACHE = os.path.join(ROOT, "_cache")
-# 数据集不进仓库：默认 <repo>/data_share，也可用环境变量 CHROMTERM_DATA 指到别处
-DATA = os.environ.get("CHROMTERM_DATA") or os.path.join(ROOT, "data_share")
+# 数据集不进仓库：默认 <repo>/data_share，也可用环境变量 CHROMTERM_DATA 指到别处。
+# 另外三个回退位置是为了"仓库被放在课题组的共享目录里"这种常见情形——那时
+# dataset 可能在仓库的上一级或上两级的 data_share / 其他组员工作/data_share 里。
+def _find_data() -> str:
+    parent = os.path.dirname(ROOT)
+    cands = [os.environ.get("CHROMTERM_DATA") or "",
+             os.environ.get("CHROM_DATA") or "",
+             os.path.join(ROOT, "data_share"),
+             os.path.join(ROOT, "其他组员工作", "data_share"),
+             os.path.join(parent, "data_share"),
+             os.path.join(parent, "其他组员工作", "data_share")]
+    for c in cands:
+        if c and os.path.isdir(os.path.join(c, "dataset")):
+            return c
+    return os.path.join(ROOT, "data_share")
+
+
+DATA = _find_data()
 MODEL_FILE = os.path.join(MODELS, "model_best.npz")
 METRICS_FILE = os.path.join(MODELS, "metrics.json")
 

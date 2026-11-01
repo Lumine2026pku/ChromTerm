@@ -155,6 +155,100 @@ class Linear(_Base):
         return softmax(X @ self.W + self.b, axis=1)
 
 
+class ShrinkLDA(_Base):
+    """收缩协方差的线性判别（LDA / shrinkage LDA）。
+
+    为什么在 961 样本 / 836 维上它比多项逻辑回归更合适：
+      逻辑回归要同时估 6×(d+1) 个参数；LDA 只估 6 个类中心 + 一个**收缩过的**
+      协方差矩阵，参数少一个量级。样本协方差在 n<d 时奇异，用
+          S' = (1-α)·S + α·(tr(S)/d)·I
+      把它拉向各向同性，α=1 退化为"最近类原型"，α=0 是纯 LDA。
+      实测最优 α≈0.6：CV-F1 0.475（逻辑回归 0.459），top-2 0.727（0.660）。
+
+    产物仍是 (W, b)，预测 = softmax(X @ W + b)，与 `Linear` 完全同构，
+    所以 pipeline.py / 网页导出的模型格式不需要任何改动。
+    """
+
+    def __init__(self, alpha: float = 0.6):
+        self.alpha = alpha
+
+    def fit(self, X, y, sample_weight=None):
+        self.classes_ = np.unique(y)
+        n, d = X.shape
+        k = len(self.classes_)
+        mu = np.zeros((k, d), np.float32)
+        S = np.zeros((d, d), np.float64)
+        for i, c in enumerate(self.classes_):
+            Xc = X[y == c]
+            mu[i] = Xc.mean(0)
+            Z = Xc - mu[i]
+            S += Z.T @ Z
+        S /= max(n - k, 1)
+        a = float(min(max(self.alpha, 0.0), 1.0))
+        S = (1 - a) * S + a * (np.trace(S) / d) * np.eye(d)
+        w, V = np.linalg.eigh(S)
+        w = np.maximum(w, 1e-8)
+        Sinv = (V / w) @ V.T
+        self.W = (Sinv @ mu.T).astype(np.float32)
+        self.b = (-0.5 * np.einsum("kd,dk->k", mu, Sinv @ mu.T)).astype(np.float32)
+        return self
+
+    def predict_proba(self, X):
+        return softmax(X @ self.W + self.b, axis=1)
+
+
+class Calibrated(_Base):
+    """把一个已经是线性的分类器按温度 T 校准：softmax(z / T)。
+
+    温度 T 在验证集上按 NLL 最小拟合。因为 (X@W+b)/T = X@(W/T) + b/T，
+    校准后的模型**仍然是同一个线性模型**，只需把 W、b 各除一次 T，
+    下游（pipeline / 网页 / JS 引擎）一行都不用改。用 `fold()` 完成这一步。
+    """
+
+    def __init__(self, base, T: float = 1.0):
+        self.base = base
+        self.T = float(T)
+
+    def fit(self, X, y, sample_weight=None):
+        self.base.fit(X, y, sample_weight=sample_weight)
+        self.classes_ = self.base.classes_
+        return self
+
+    def predict_proba(self, X):
+        return softmax((X @ self.base.W + self.base.b) / self.T, axis=1)
+
+    def fold(self):
+        """把温度折进 W、b，返回一个等价的普通线性模块（T≡1）。"""
+        if not hasattr(self.base, "W"):
+            raise ValueError("只有线性分类器可以折温度")
+        self.base.W = (self.base.W / self.T).astype(np.float32)
+        self.base.b = (self.base.b / self.T).astype(np.float32)
+        self.T = 1.0
+        return self.base
+
+
+def fit_temperature(P: np.ndarray, y: np.ndarray, lo: float = 0.1, hi: float = 50.0,
+                    n: int = 160) -> float:
+    """按验证集负对数似然选温度（保序、不改变 argmax，所以准确率不变）。
+
+    在 log 尺度上搜索：LDA 的判别值量级可能很大（Sinv @ mu），最优 T 常常在 3–15，
+    线性等距搜索会在低端浪费分辨率、又可能撞到上限。
+    """
+    P = np.clip(np.asarray(P, np.float64), 1e-12, 1.0)
+    y = np.asarray(y, int)
+    logits = np.log(P)
+    best_T, best = 1.0, np.inf
+    for T in np.exp(np.linspace(np.log(lo), np.log(hi), n)):
+        Q = logits / T
+        Q -= Q.max(1, keepdims=True)
+        Q = np.exp(Q)
+        Q /= Q.sum(1, keepdims=True)
+        nll = -float(np.mean(np.log(np.clip(Q[np.arange(len(y)), y], 1e-12, 1.0))))
+        if nll < best:
+            best, best_T = nll, float(T)
+    return best_T
+
+
 class RFFRidge(_Base):
     """随机傅里叶特征（RBF 核的近似）+ 岭回归闭式解。"""
 
