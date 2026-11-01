@@ -47,13 +47,14 @@
               stroke-width="1.6" stroke-linecap="round"/>
       </svg>
       <p class="drop-title">拖入端部小图，或 <button id="pick" class="linkish">点击选择</button></p>
-      <p class="drop-hint">JPG / PNG / TIF · 也可 Ctrl+V 粘贴 · 图片只在本机内存里处理，不会上传</p>
+      <p class="drop-hint">JPG / PNG / TIF 等 · 也可 Ctrl+V 粘贴 · 图片只在本机内存里处理，不会上传</p>
       <div class="drop-actions">
         <button id="exampleTerm" class="ghost">示例：端部小图</button>
+        <button id="exampleTif" class="ghost">示例：TIF</button>
         <button id="examplePhoto" class="ghost">示例：整片照片</button>
       </div>
     </div>
-    <input type="file" id="file" accept="image/*" hidden>
+    <input type="file" id="file" accept="image/*,.tif,.tiff" hidden>
 
     <figure id="viewer" class="viewer hidden">
       <div class="viewer-head">
