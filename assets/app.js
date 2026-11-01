@@ -119,6 +119,8 @@ function bindUI() {
 
   $('exampleTerm').addEventListener('click', () => loadDemo('term'));
   $('examplePhoto').addEventListener('click', () => loadDemo('photo'));
+  const exTif = $('exampleTif');
+  if (exTif) exTif.addEventListener('click', () => loadDemo('tiff'));
 
   $('modeSingle').addEventListener('click', () => setMode('single'));
   $('modeMulti').addEventListener('click', () => setMode('multi'));
@@ -166,12 +168,17 @@ async function loadDemo(kind) {
       send(new File([blob], 'blank.png', { type: 'image/png' }));
       return;
     }
-    const url = kind === 'photo' ? 'examples/example_photo.jpg' : 'examples/example_terminal.jpg';
+    const map = {
+      photo: ['examples/example_photo.jpg', 'example_photo.jpg'],
+      term: ['examples/example_terminal.jpg', 'example_terminal.jpg'],
+      tiff: ['examples/example_terminal.tif', 'example_terminal.tif'],
+    };
+    const [url, name] = map[kind] || map.term;
     const r = await fetch(url, { cache: 'force-cache' });
     if (!r.ok) throw new Error(url + ' → HTTP ' + r.status);
     const blob = await r.blob();
-    const name = kind === 'photo' ? 'example_photo.jpg' : 'example_terminal.jpg';
-    send(new File([blob], name, { type: blob.type || 'image/jpeg' }));
+    const type = name.endsWith('.tif') ? 'image/tiff' : (blob.type || 'image/jpeg');
+    send(new File([blob], name, { type }));
   } catch (e) {
     showError('示例图加载失败：' + e.message + '（本地请用 python app.py 或 http 服务器打开本页）');
   }
@@ -179,21 +186,56 @@ async function loadDemo(kind) {
 
 /* ------------------------------------------------------------------ 读图 */
 
+function waitImage(img) {
+  return new Promise((resolve, reject) => {
+    if (img.complete && img.naturalWidth > 0) return resolve();
+    img.onload = () => resolve();
+    img.onerror = () => reject(new Error('图片解码失败'));
+  });
+}
+
+/**
+ * 读图并显示。
+ *
+ * 浏览器（Chrome/Edge/Firefox）的 <img> 不支持 image/tiff，直接 src=tif 会触发 error
+ * —— 这正是 .tif 上传「解码失败」的原因。这里加一个分支：图片解码失败且字节头是 TIFF 时，
+ * 用 assets/js/tiff.js 在浏览器里解码，再转成 PNG dataURL 交给后续流程（显示 / 叠加 / 推理）。
+ * 服务模式其实也可以让 Python(PIL) 读，但显示同样需要这一份解码结果。
+ */
 async function decodeImage(file) {
   if (state.objectUrl) URL.revokeObjectURL(state.objectUrl);
   state.objectUrl = URL.createObjectURL(file);
   const img = $('photo');
   img.src = state.objectUrl;
-  await new Promise((resolve, reject) => {
-    if (img.complete && img.naturalWidth > 0) return resolve();
-    img.onload = () => resolve();
-    img.onerror = () => reject(new Error('图片解码失败'));
-  });
+  let note = '';
+  try {
+    await waitImage(img);
+  } catch (err) {
+    // 不是图片 / 浏览器不支持该格式：先看是不是 TIFF
+    const buf = await file.arrayBuffer();
+    const { isTiff, decodeTiff } = await import('./js/tiff.js');
+    if (!isTiff(buf)) throw err;
+    let dec;
+    try {
+      dec = await decodeTiff(buf);
+    } catch (e2) {
+      throw new Error(`TIFF 解码失败：${e2.message}；请另存为 PNG/JPG，或用 python app.py 的服务模式判读。`);
+    }
+    if (dec.width * dec.height > 4e7) {
+      throw new Error(`这张 TIFF 太大（${dec.width}×${dec.height}），请先裁剪或另存为 PNG/JPG`);
+    }
+    const c = document.createElement('canvas');
+    c.width = dec.width; c.height = dec.height;
+    c.getContext('2d').putImageData(new ImageData(dec.data, dec.width, dec.height), 0, 0);
+    img.src = c.toDataURL('image/png');
+    await waitImage(img);
+    note = ' · TIFF 已在浏览器内解码';
+  }
   state.image = { w: img.naturalWidth, h: img.naturalHeight, file };
   $('viewer').classList.remove('hidden');
   $('imgMeta').textContent =
     `${file.name || '粘贴的图片'} · ${img.naturalWidth}×${img.naturalHeight} · ` +
-    `${(file.size / 1024).toFixed(0)} KB`;
+    `${(file.size / 1024).toFixed(0)} KB${note}`;
   syncOverlaySize();
   return img;
 }
@@ -239,7 +281,17 @@ async function send(file) {
   }, 200);
 
   try {
-    const img = await decodeImage(file);
+    let img = null;
+    try {
+      img = await decodeImage(file);
+    } catch (err) {
+      // 浏览器解不开（例如分块 / JPEG 压缩的 TIFF）：服务模式下仍可让 Python 判读
+      if (!state.api) throw err;
+      state.file = file;
+      state.image = null;
+      $('viewer').classList.add('hidden');
+      $('imgMeta').textContent = `${file.name || '图片'} · 浏览器无法显示，交由本地服务判读`;
+    }
     state.file = file;
     await analyzeCurrent(img);
   } catch (e) {
@@ -252,7 +304,6 @@ async function send(file) {
 }
 
 async function analyzeCurrent(img) {
-  img = img || $('photo');
   $('loading').classList.remove('hidden');
   $('result').classList.add('hidden');
   $('error').classList.add('hidden');
@@ -260,6 +311,7 @@ async function analyzeCurrent(img) {
     if (state.api) {
       state.data = await analyzeViaApi(state.file, state.mode);
     } else {
+      if (!img) throw new Error('这张图片浏览器解不开，无法在本地推理；请另存为 PNG/JPG，或用 python app.py 的服务模式。');
       state.data = await analyzeInBrowser(img);
     }
     render(state.data);
