@@ -1,0 +1,52 @@
+name: Deploy to GitHub Pages
+
+# 把静态网页（index.html + assets + examples）发布到 GitHub Pages。
+# 触发：推送到 main 分支，或在 Actions 页面手动运行。
+# 首次使用前，请在仓库 Settings → Pages → Build and deployment 里把 Source 选成
+# "GitHub Actions"（而不是 "Deploy from a branch"），否则本工作流不会生效。
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 只收集网页需要的文件
+        run: |
+          mkdir -p _site
+          cp -r index.html assets examples _site/
+          touch _site/.nojekyll
+          # 安全检查：入口与模型必须在
+          test -f _site/index.html
+          test -f _site/assets/model/model_best.json
+          test -f _site/assets/js/engine.js
+          du -sh _site
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

@@ -38,12 +38,28 @@ def main() -> int:
     # geo 块在最后 11 维：用训练集（train+val）**经过 feat_geo 变换后**的均值代入。
     # 注意不能直接用 feat["geo"] 原始矩阵：里面 width_px 有 NaN，
     # 而 feat_geo 会把非有限值变成 0，两者不是一回事（第一版就在这里写出了 NaN）。
-    feat = load_cache()
-    split = feat["split"].astype(str)
-    X = build_matrix(feat, "raw", FEATURE_SETS[feature_set][1])
-    # feat_geo 输出 11 维（10 个标量 + 宽长比），而缓存里的 feat["geo"] 是 12 列，别搞混
-    n_geo = int(feat_geo(feat["geo"][0], feat["geo_names"]).size)
-    geo_mean = X[split != "test"][:, -n_geo:].mean(0).astype(np.float64).tolist()
+    #
+    # 仓库发布版不带数据集与 _cache（见 .gitignore），这时无法重算 geo_mean。
+    # 退路：沿用现有 JSON 里的 geo_mean 并明确告警——几何块对准确率的贡献≈0
+    # （实测去几何 0.4587 vs 全特征 0.4593），所以"沿用旧值"是可接受的降级，
+    # 但它只保证"特征管线没变"时正确。
+    try:
+        feat = load_cache()
+        split = feat["split"].astype(str)
+        X = build_matrix(feat, "raw", FEATURE_SETS[feature_set][1])
+        # feat_geo 输出 11 维（10 个标量 + 宽长比），而缓存里的 feat["geo"] 是 12 列，别搞混
+        n_geo = int(feat_geo(feat["geo"][0], feat["geo_names"]).size)
+        geo_mean = X[split != "test"][:, -n_geo:].mean(0).astype(np.float64).tolist()
+    except FileNotFoundError:
+        prev = os.path.join(ROOT, "assets", "model", "model_best.json")
+        if not os.path.exists(prev):
+            raise SystemExit("没有 _cache/ 也没有上一版 model_best.json，无法确定 geo_mean。"
+                             "先跑 python tools/build_cache.py（需要 data_share/）。")
+        old = json.load(open(prev, encoding="utf-8"))
+        geo_mean = [float(v) for v in old["geo_mean"]]
+        n_geo = int(len(geo_mean))
+        print("  [警告] 找不到 _cache/，geo_mean 沿用上一版 JSON："
+              "只有在特征管线未变时才正确（几何块贡献≈0）。")
 
     for name, arr in (("mu", mu), ("sd", sd), ("W", W), ("b", b),
                       ("geo_mean", np.asarray(geo_mean))):
@@ -71,11 +87,17 @@ def main() -> int:
         metrics=dict(test_acc=metrics.get("test_acc"),
                      test_macro_f1=metrics.get("test_macro_f1"),
                      test_top2=metrics.get("test_top2"),
+                     test_ece=metrics.get("test_ece"),
+                     test_ece_uncalibrated=metrics.get("test_ece_uncalibrated"),
                      n_test=metrics.get("n_test"),
+                     cv_f1=metrics.get("cv_f1"),
                      loso_acc=metrics.get("loso_acc"),
+                     temperature=metrics.get("temperature"),
+                     risk_coverage=metrics.get("risk_coverage"),
                      human=metrics.get("human")),
-        note=("网页端跳过几何量测块（geo），以训练均值代入；实测 test 准确率 "
-              "0.5133 vs 完整 0.5067，差在噪声内。"),
+        note=("网页端跳过几何量测块（geo），以训练均值代入。实测这条路的 test 准确率"
+              " 0.500，完整特征（含几何）0.513 —— 差在噪声内，所以静态网页不必移植"
+              "骨架化那一整套。权重已含温度校准（T≈4.98 折进 W/b）。"),
     )
     out = os.path.join(REPO, "assets", "model", "model_best.json")
     os.makedirs(os.path.dirname(out), exist_ok=True)
